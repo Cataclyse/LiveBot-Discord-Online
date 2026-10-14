@@ -1,0 +1,11 @@
+{
+  "name": "livebot-discord-client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --check app.js && node --check discord.js && node --test test/*.test.js",
+    "start": "node scripts/serve.js"
+  },
+  "engines": { "node": ">=22" }
+}
