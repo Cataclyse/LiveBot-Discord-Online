@@ -1,4 +1,5 @@
 import { DiscordClient, Gateway } from './discord.js';
+import { config } from './config.js';
 
 const $ = id => document.getElementById(id);
 const colors = ['#5865f2', '#bc836b', '#4a9d83', '#ae70bd', '#be8e42', '#587ba4'];
@@ -188,9 +189,15 @@ $('login-form').addEventListener('submit', async event => {
   if (state.client) return;
   let token = $('token').value.trim().replace(/^Bot\s+/i, '');
   if (!token || /\s/.test(token)) { $('login-error').textContent = 'Collez un token de bot valide, sans espaces.'; $('login-error').hidden = false; return; }
-  const session = ++state.session, client = new DiscordClient(token);
+  const relayURL = $('relay-url').value.trim();
+  if (relayURL && !$('relay-consent').checked) { $('login-error').textContent = 'Confirmez que vous faites confiance à ce relais : il recevra le token pour contacter Discord.'; $('login-error').hidden = false; return; }
+  let client;
+  try { client = new DiscordClient(token, globalThis.fetch, relayURL); }
+  catch (e) { $('login-error').textContent = e.message; $('login-error').hidden = false; return; }
+  const session = ++state.session;
   state.client = client; $('connect-button').disabled = true; $('demo-button').disabled = true; $('connect-button').textContent = 'Connexion à Discord…'; $('login-error').hidden = true;
   try {
+    await client.prepare();
     const user = await client.me();
     if (!user.bot) throw new Error('Seuls les tokens de bots sont acceptés.');
     const guilds = await client.guilds(), gatewayInfo = await client.gateway();
@@ -237,3 +244,6 @@ $('invite-button').addEventListener('click', () => {
   const url = new URL('https://discord.com/oauth2/authorize'); url.searchParams.set('client_id', state.user.id); url.searchParams.set('scope', 'bot'); url.searchParams.set('permissions', '68608'); window.open(url.href, '_blank', 'noopener,noreferrer');
 });
 window.addEventListener('pagehide', logout);
+$('relay-url').value = config.relayURL || '';
+if (config.relayURL) $('relay-options').open = true;
+$('relay-url').addEventListener('input', () => { $('relay-consent').checked = false; });

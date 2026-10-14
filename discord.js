@@ -1,15 +1,41 @@
 const API = 'https://discord.com/api/v10';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+export function relayAPIBase(value) {
+  if (!value?.trim()) return API;
+  let url;
+  try { url = new URL(value.trim()); } catch { throw new Error('L’adresse du relais doit être une URL HTTPS Cloudflare Worker.'); }
+  const allowedHost = url.hostname === 'livebot.cataclyse.xyz' || /^[a-z0-9.-]+\.workers\.dev$/.test(url.hostname);
+  if (url.protocol !== 'https:' || !allowedHost || url.port || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('Utilisez https://livebot.cataclyse.xyz ou l’origine HTTPS de votre Worker (*.workers.dev), sans chemin ni paramètres.');
+  }
+  return url.origin + '/api/discord';
+}
+
 export class DiscordClient {
   #token;
   #fetch;
   #queue = Promise.resolve();
   #cooldown = 0;
   #stopped = false;
-  constructor(token, fetcher = globalThis.fetch) {
+  #base;
+  constructor(token, fetcher = globalThis.fetch, relayURL = '') {
     this.#token = token.trim().replace(/^Bot\s+/i, '');
     this.#fetch = fetcher;
+    this.#base = relayAPIBase(relayURL);
+  }
+  async prepare(pageURL = globalThis.location?.href) {
+    if (!pageURL || this.#base !== API) return;
+    const page = new URL(pageURL);
+    if (page.protocol === 'file:') throw new Error('Lancez npm start puis ouvrez http://127.0.0.1:8080, plutôt que le fichier index.html.');
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(page.hostname)) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const r = await this.#fetch(new URL('/livebot-health', page).href, { signal: controller.signal, credentials: 'omit', redirect: 'error' });
+      if (r.ok && (await r.json()).relay === 'livebot-local-v1') this.#base = new URL('/api/discord', page).href;
+    } catch { /* A different preview server keeps direct API access. */ }
+    finally { clearTimeout(timer); }
   }
   stop() { this.#stopped = true; this.#token = ''; }
   request(path, options = {}) {
@@ -23,16 +49,19 @@ export class DiscordClient {
       await wait(Math.max(0, this.#cooldown - Date.now()));
       if (this.#stopped) throw new Error('Session déconnectée.');
       let response;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
       try {
-        response = await this.#fetch(API + path, {
+        response = await this.#fetch(this.#base + path, {
           method: options.method || 'GET',
           headers: { Authorization: `Bot ${this.#token}`, ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
           ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-          signal: AbortSignal.timeout(20000), credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer'
+          signal: controller.signal, credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer'
         });
       } catch {
-        throw new Error('Discord est injoignable. Vérifiez votre connexion ; le navigateur peut aussi bloquer la requête (CORS). Aucun proxy tiers n’est utilisé.');
-      }
+        if (controller.signal.aborted) throw new Error('La connexion n’a pas répondu sous 20 secondes. Réessayez.');
+        throw new Error(this.#base === API ? 'L’accès direct à Discord a échoué (réseau ou blocage navigateur). En local, utilisez npm start ; sur GitHub Pages, configurez votre relais dans « Connexion avancée ».' : 'Le relais est injoignable ou refuse cette origine. Vérifiez son adresse et ALLOWED_ORIGINS ; consultez la console réseau du navigateur.');
+      } finally { clearTimeout(timer); }
       const data = response.status === 204 ? null : await response.json().catch(() => ({}));
       if (response.status === 429) {
         const seconds = Number(data.retry_after);
@@ -45,6 +74,8 @@ export class DiscordClient {
         if (Number.isFinite(seconds)) this.#cooldown = Date.now() + Math.max(0, seconds) * 1000;
       }
       if (!response.ok) {
+        if ([502, 504].includes(response.status)) throw new Error('Le relais ne parvient pas à joindre Discord. Vérifiez sa connexion et réessayez.');
+        if (response.status === 503) throw new Error('Configurez ALLOWED_ORIGINS sur le Worker avant de vous connecter.');
         if (response.status === 401) throw new Error('Token invalide ou révoqué. Utilisez le token d’un bot, pas celui d’un compte utilisateur.');
         if (response.status === 403) throw new Error('Le bot n’a pas les permissions nécessaires dans ce salon (voir le salon, lire l’historique ou envoyer des messages).');
         if (response.status === 404) throw new Error('Ce serveur, salon ou message n’est plus accessible au bot.');

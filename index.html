@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1e1f22">
   <meta name="description" content="LiveBot — un client open source pour discuter avec votre bot Discord, directement depuis votre navigateur.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://discord.com wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' https://cdn.discordapp.com https://media.discordapp.net; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://discord.com https://livebot.cataclyse.xyz https://*.workers.dev wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' https://cdn.discordapp.com https://media.discordapp.net; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>LiveBot · Discord Bot Client</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
@@ -36,12 +36,13 @@
           <div class="token-field"><input id="token" type="password" placeholder="Collez votre token ici" required autocomplete="off" spellcheck="false" aria-describedby="token-help login-error"><button id="toggle-token" type="button" aria-label="Afficher le token">◉</button></div>
           <p id="token-help" class="field-help">Disponible dans le <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Developer Portal ↗</a>, rubrique Bot.</p>
           <label class="checkbox-label"><input id="content-intent" type="checkbox" checked><span>Lire le contenu des messages<small>Activez « Message Content Intent » dans le portail.</small></span></label>
+          <details id="relay-options" class="relay-options"><summary>Connexion avancée · accès direct bloqué ?</summary><label for="relay-url">ADRESSE DE VOTRE RELAIS</label><input id="relay-url" type="url" placeholder="https://livebot-relay.votre-compte.workers.dev" autocomplete="off" spellcheck="false"><p class="field-help">Laissez vide pour une connexion directe. Utilisez uniquement un relais que vous contrôlez ou auquel vous faites confiance.</p><label class="checkbox-label"><input id="relay-consent" type="checkbox"><span>J’autorise ce relais à recevoir mon token pour transmettre les requêtes à Discord.</span></label></details>
           <p id="login-error" class="error-text" role="alert" hidden></p>
           <button class="primary-button" id="connect-button" type="submit">Connecter mon bot <span>→</span></button>
         </form>
         <div class="divider"><span>ou découvrez l’interface</span></div>
         <button id="demo-button" class="secondary-button" type="button">Essayer le mode démo <span>↗</span></button>
-        <p class="privacy-note">▣ Le token reste en mémoire dans cet onglet. Il est transmis uniquement à Discord et effacé à la déconnexion.</p>
+        <p class="privacy-note">▣ Token conservé en mémoire, effacé à la déconnexion. Les appels passent par Discord ou le relais choisi. Avec npm start, le relais est sur votre PC.</p>
       </section>
     </main>
     <footer class="login-footer"><span>Un client indépendant. Non affilié à Discord.</span><span>Fait pour les bots, par leurs humains.</span></footer>
