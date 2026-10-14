@@ -1,5 +1,8 @@
 import { DiscordClient, Gateway, probeConnection } from './discord.js';
 import { config } from './config.js';
+import { renderMarkdown } from './message-content.js';
+import { renderAttachment, renderEmbed, clearMediaState } from './media.js';
+import { icon } from './icons.js';
 
 const $ = id => document.getElementById(id);
 const colors = ['#5865f2', '#bc836b', '#4a9d83', '#ae70bd', '#be8e42', '#587ba4'];
@@ -10,15 +13,15 @@ function avatar(user, className = 'avatar') {
   const node = el('div', className, name(user).slice(0, 1).toUpperCase());
   const index = [...String(user.id)].reduce((sum, c) => sum + c.charCodeAt(0), 0) % colors.length;
   node.style.backgroundColor = colors[index];
-  if (/^\d+$/.test(user.id) && /^[a-zA-Z0-9_]+$/.test(user.avatar || '')) {
-    const img = el('img'); img.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=80`; img.alt = ''; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer'; node.replaceChildren(img);
-  }
+  const img = el('img');
+  img.src = /^\d+$/.test(user.id) && /^[a-zA-Z0-9_]+$/.test(user.avatar || '') ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${user.avatar.startsWith('a_') ? 'gif' : 'png'}?size=80` : `https://cdn.discordapp.com/embed/avatars/${/^\d+$/.test(user.id) ? Number((BigInt(user.id) >> 22n) % 6n) : index}.png`;
+  img.alt = ''; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer'; img.addEventListener('error', () => { node.textContent = name(user).slice(0, 1).toUpperCase(); }); node.replaceChildren(img);
   return node;
 }
 function notice(text = '', error = false) { $('app-notice').textContent = text; $('app-notice').hidden = !text; $('app-notice').classList.toggle('error', error); }
 function error(message) { notice(message instanceof Error ? message.message : String(message), true); }
 function setStatus(status, detail) {
-  const labels = { online: '● En ligne', connecting: 'Connexion…', reconnecting: 'Reconnexion…', error: 'Temps réel indisponible', demo: '● Mode démo' };
+  const labels = { online: 'En ligne', connecting: 'Connexion…', reconnecting: 'Reconnexion…', error: 'Temps réel indisponible', demo: 'Mode démo' };
   $('connection-status').textContent = labels[status] || status;
   $('settings-status').textContent = labels[status] || status;
   if (detail) error(detail);
@@ -28,10 +31,11 @@ function demoData() {
   const users = [{ id: 'demo-bot', username: 'LiveBot', bot: true }, { id: 'max', username: 'Maxime' }, { id: 'lea', username: 'Léa' }, { id: 'alex', username: 'Alex' }];
   state.user = users[0];
   state.guilds = [{ id: 'demo-1', name: 'Le QG des créateurs' }, { id: 'demo-2', name: 'Bot Lab' }, { id: 'demo-3', name: 'La communauté' }];
-  const contents = ['Bienvenue au QG ! Ici on construit, on partage, et on fait vivre nos idées. ✨', 'J’ai enfin terminé la nouvelle version de mon bot !', 'Trop bien ! Tu nous montres ? 👀', 'Hello tout le monde 👋\nJe suis connecté depuis LiveBot. On peut maintenant discuter directement avec mon bot.', 'C’est exactement ce qu’il me fallait pour tester mes salons.', 'Une interface familière, mais aux commandes du bot. J’adore le concept.', 'Prêt à essayer ? Écris un message juste en dessous.'];
+  const contents = ['Bienvenue dans **#général**.\nCe salon permet de tester le client.', 'Le texte peut être **gras**, *italique*, __souligné__ ou ~~barré~~.', 'Et on peut combiner __**les styles**__ ou masquer ||un spoiler||.', '```javascript\nconst client = new DiscordClient(token);\nawait client.send(channelId, "Bonjour !");\n```', '> Une citation\n\nUn lien vers le [Developer Portal](https://discord.com/developers/applications) et du `code inline`.', '- Premier élément\n- Deuxième élément\n\n-# Texte secondaire', 'Les images et les pièces jointes s’affichent sous le message.'];
   const authors = [users[2], users[1], users[3], users[0], users[1], users[2], users[0]];
   const base = Date.now() - 28 * 60000;
   state.cache.set('demo-1-general', contents.map((content, i) => ({ id: `demo-msg-${i}`, channel_id: 'demo-1-general', content, author: authors[i], timestamp: new Date(base + i * 3 * 60000).toISOString() })));
+  state.cache.get('demo-1-general').at(-1).attachments = [{ id: 'demo-image', url: new URL('./assets/discord/login-artwork.svg', location.href).href, content_type: 'image/svg+xml', filename: 'discord-login.svg', width: 1440, height: 900 }, { id: 'demo-spoiler', url: new URL('./assets/discord/login-artwork.svg', location.href).href, content_type: 'image/svg+xml', filename: 'SPOILER_apercu.svg', width: 1440, height: 900 }];
 }
 function demoChannels(guild) { return [{ id: `${guild.id}-category`, name: 'LA COMMUNAUTÉ', type: 4, position: 0 }, ...['général', 'présentations', 'projets', 'bot-commands', 'ressources'].map((n, i) => ({ id: `${guild.id}-${i === 0 ? 'general' : i}`, name: n, type: 0, position: i, parent_id: `${guild.id}-category`, topic: i === 0 ? 'Un endroit pour discuter, créer et partager.' : `Les conversations de #${n}.` }))]; }
 function showApp() {
@@ -106,20 +110,20 @@ async function loadMessages(older = false, revision = state.revision) {
     const result = await client.messages(channel.id, older ? messages[0]?.id : undefined);
     if (revision !== state.revision) return;
     mergeMessages(channel.id, result);
-    if (older || !messages.length) state.hasOlder = result.length === 50;
+    if (older || !messages.length || result.length === 50) state.hasOlder = result.length === 50;
     renderMessages(!older);
     if (older) scroll.scrollTop = top + scroll.scrollHeight - height;
     notice(result.some(m => !m.content && !m.attachments?.length && !m.embeds?.length) ? 'Certains messages n’ont pas de contenu accessible. Vérifiez « Message Content Intent » dans le Developer Portal.' : '');
   } catch (e) { if (revision === state.revision) error(e); }
   finally { if (revision === state.revision) { state.historyLoading = false; $('load-older').disabled = false; } }
 }
-function safeLink(url) { try { const parsed = new URL(url); return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : null; } catch { return null; } }
-function appendText(node, content) {
-  const parts = String(content).split(/(https?:\/\/[^\s<>]+)/g);
-  parts.forEach((part, i) => { const href = i % 2 ? safeLink(part) : null; if (href) { const a = el('a', '', part); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; node.append(a); } else node.append(document.createTextNode(part)); });
+function openImage(src, filename, original) {
+  $('viewer-image').src = src; $('viewer-image').alt = filename; $('viewer-title').textContent = filename; $('viewer-original').href = original;
+  $('image-dialog').showModal();
 }
 function renderMessages(bottom = false) {
   const messages = state.cache.get(state.channel?.id) || [];
+  const context = { users: Object.fromEntries(messages.map(m => [m.author.id, name(m.author)])), channels: Object.fromEntries(state.channels.map(c => [c.id, c.name])), roles: Object.fromEntries((state.guild?.roles || []).map(r => [r.id, r.name])) };
   const search = $('search-input').value.trim().toLocaleLowerCase();
   const nodes = []; let day = '';
   for (const message of messages.filter(m => !search || `${m.content || ''} ${name(m.author)}`.toLocaleLowerCase().includes(search))) {
@@ -130,10 +134,13 @@ function renderMessages(bottom = false) {
     heading.append(el('strong', '', name(message.author)));
     if (message.author.bot) heading.append(el('span', 'bot-tag', 'APP'));
     const time = el('time', '', date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })); time.dateTime = message.timestamp; time.title = date.toLocaleString('fr-FR'); heading.append(time);
-    const text = el('div', 'message-text'); appendText(text, message.content || (message.attachments?.length || message.embeds?.length ? '' : 'Contenu non disponible.'));
+    const text = el('div', 'message-text'); renderMarkdown(text, message.content || (message.attachments?.length || message.embeds?.length ? '' : 'Contenu non disponible.'), false, context);
     content.append(heading, text);
-    for (const attachment of message.attachments || []) { const href = safeLink(attachment.url); if (!href) continue; const a = el('a', 'message-attachment', `↗ ${attachment.filename || 'Pièce jointe'}`); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; content.append(a); }
-    for (const embed of message.embeds || []) { const box = el('div', 'message-embed'); if (embed.title) box.append(el('strong', '', embed.title)); if (embed.description) { const p = el('p'); appendText(p, embed.description); box.append(p); } if (box.childNodes.length) content.append(box); }
+    const attachments = el('div', 'attachments');
+    for (const attachment of message.attachments || []) { const rendered = renderAttachment(attachment, { key: `${message.id}-${attachment.id || attachment.filename}`, openImage }); if (rendered) attachments.append(rendered); }
+    if (attachments.childNodes.length) content.append(attachments);
+    for (const [index, embed] of (message.embeds || []).entries()) { const rendered = renderEmbed(embed, { key: `${message.id}-embed-${index}`, openImage, context }); if (rendered) content.append(rendered); }
+    if (message.referenced_message) { const reply = el('div', 'reply-preview'); reply.append(el('strong', '', name(message.referenced_message.author)), el('span', '', (message.referenced_message.content || 'Pièce jointe').slice(0, 120))); content.prepend(reply); }
     row.append(avatar(message.author), content);
     if (message.author.id === state.user.id) { const button = el('button', 'delete-message', 'Supprimer'); button.addEventListener('click', () => deleteMessage(message, button)); row.append(button); }
     nodes.push(row);
@@ -177,8 +184,9 @@ function gatewayEvent(type, data) {
 function logout() {
   ++state.session; ++state.revision;
   state.gateway?.stop(); state.client?.stop();
+  clearMediaState(); $('image-dialog').close(); $('viewer-image').removeAttribute('src');
   Object.assign(state, { client: null, gateway: null, user: null, guilds: [], guild: null, channel: null, channels: [], demo: false, sending: false, historyLoading: false, hasOlder: false }); state.cache.clear();
-  $('settings-dialog').close(); $('token').value = ''; $('token').type = 'password'; $('toggle-token').setAttribute('aria-label', 'Afficher le token'); $('app-view').hidden = true; $('login-view').hidden = false; $('login-error').hidden = true; $('connect-button').disabled = false; $('connect-button').textContent = 'Connecter mon bot →'; $('demo-button').disabled = false; $('message-input').value = ''; document.body.classList.remove('sidebar-open'); notice();
+  $('settings-dialog').close(); $('token').value = ''; $('token').type = 'password'; $('toggle-token').setAttribute('aria-label', 'Afficher le token'); $('app-view').hidden = true; $('login-view').hidden = false; $('login-error').hidden = true; $('connect-button').disabled = false; $('connect-button').textContent = 'Se connecter'; $('demo-button').disabled = false; $('message-input').value = ''; document.body.classList.remove('sidebar-open'); notice();
 }
 function home() {
   ++state.revision; state.guild = null; state.channel = null; state.channels = [];
@@ -208,7 +216,7 @@ $('login-form').addEventListener('submit', async event => {
     if (guilds.length) await selectGuild(guilds[0]); else { home(); notice('Votre bot n’a encore aucun serveur. Utilisez + pour l’inviter.'); }
   } catch (e) {
     if (session !== state.session) return;
-    client.stop(); state.client = null; token = ''; $('token').value = ''; $('login-error').textContent = e.message; $('login-error').hidden = false; $('connect-button').disabled = false; $('demo-button').disabled = false; $('connect-button').textContent = 'Connecter mon bot →';
+    client.stop(); state.client = null; token = ''; $('token').value = ''; $('login-error').textContent = e.message; $('login-error').hidden = false; $('connect-button').disabled = false; $('demo-button').disabled = false; $('connect-button').textContent = 'Se connecter';
   }
 });
 $('demo-button').addEventListener('click', () => { ++state.session; state.demo = true; demoData(); showApp(); setStatus('demo'); selectGuild(state.guilds[0]); });
@@ -246,8 +254,8 @@ $('invite-button').addEventListener('click', () => {
 window.addEventListener('pagehide', logout);
 const localPage = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 $('relay-url').value = localPage ? '' : config.relayURL || '';
-if ($('relay-url').value) $('relay-options').open = true;
-$('relay-url').addEventListener('input', () => { $('relay-consent').checked = false; });
+$('relay-consent-row').hidden = !$('relay-url').value;
+$('relay-url').addEventListener('input', () => { $('relay-consent').checked = false; $('relay-consent-row').hidden = !$('relay-url').value.trim(); });
 $('connection-check').addEventListener('click', async () => {
   const button = $('connection-check');
   button.disabled = true; $('connection-result').hidden = false;
@@ -261,3 +269,18 @@ $('connection-check').addEventListener('click', async () => {
     $('connection-result').textContent = e.message;
   } finally { button.disabled = false; }
 });
+document.querySelectorAll('[data-icon]').forEach(node => node.replaceChildren(icon(node.dataset.icon)));
+const controlIcons = { 'settings-button': 'settings', 'logout-button': 'logout', 'refresh-channels': 'refresh', 'refresh-messages': 'refresh', 'members-button': 'members', 'mobile-menu': 'menu', 'send-button': 'send', 'close-settings': 'close', 'invite-button': 'plus', 'about-button': 'help', 'close-image': 'close' };
+Object.entries(controlIcons).forEach(([id, symbol]) => $(id).replaceChildren(icon(symbol)));
+$('close-image').addEventListener('click', () => $('image-dialog').close());
+$('image-dialog').addEventListener('click', event => { if (event.target === $('image-dialog')) $('image-dialog').close(); });
+const formats = { bold: ['**', '**'], italic: ['*', '*'], underline: ['__', '__'], strike: ['~~', '~~'], spoiler: ['||', '||'], code: ['`', '`'], block: ['```\n', '\n```'] };
+function insertFormat(format) {
+  const input = $('message-input'); if (input.disabled) return;
+  const [before, after] = formats[format]; const start = input.selectionStart, end = input.selectionEnd;
+  const content = input.value.slice(start, end) || (format === 'block' ? 'code' : 'texte');
+  if (input.value.length + before.length + after.length + (end === start ? content.length : 0) > 2000) return;
+  input.setRangeText(before + content + after, start, end, 'end'); input.setSelectionRange(start + before.length, start + before.length + content.length); input.focus(); input.dispatchEvent(new Event('input'));
+}
+document.querySelectorAll('[data-format]').forEach(button => button.addEventListener('click', () => insertFormat(button.dataset.format)));
+$('message-input').addEventListener('keydown', event => { if (!(event.ctrlKey || event.metaKey) || event.altKey) return; const format = { b: 'bold', i: 'italic', u: 'underline' }[event.key.toLowerCase()]; if (format) { event.preventDefault(); insertFormat(format); } });

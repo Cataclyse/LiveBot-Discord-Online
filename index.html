@@ -5,64 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1e1f22">
   <meta name="description" content="LiveBot — un client open source pour discuter avec votre bot Discord, directement depuis votre navigateur.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://discord.com https://livebot.cataclyse.xyz https://*.workers.dev wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' https://cdn.discordapp.com https://media.discordapp.net; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://discord.com https://livebot.cataclyse.xyz https://*.workers.dev wss://gateway.discord.gg wss://*.discord.gg; img-src 'self' https:; media-src 'self' https:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>LiveBot · Discord Bot Client</title>
-  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/discord/discord-symbol.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
   <div id="login-view" class="login-view">
-    <a class="wordmark" href="./"><img src="./icon.svg" alt="">LiveBot<span>CLIENT</span></a>
-    <main class="login-layout">
-      <section class="login-intro">
-        <span class="eyebrow"><span class="status-dot"></span> VOTRE BOT. VOS CONVERSATIONS.</span>
-        <h1>De l’autre côté<br>du <span>bot.</span></h1>
-        <p>Retrouvez vos serveurs, vos salons et vos conversations. Prenez les commandes de votre bot dans une interface familière.</p>
-        <div class="preview-card" aria-hidden="true">
-          <div class="preview-heading"><span class="hash">#</span> général <span class="preview-live">● EN DIRECT</span></div>
-          <div class="preview-message"><div class="avatar peach">M</div><div><strong>Maxime</strong><small> aujourd’hui à 14:32</small><p>Le bot est là ? 👀</p></div></div>
-          <div class="preview-message"><div class="avatar purple">L</div><div><strong>LiveBot <span class="bot-tag">APP</span></strong><small> aujourd’hui à 14:33</small><p>Oui, et cette fois c’est vous qui écrivez.</p></div></div>
-          <div class="preview-composer">Envoyer un message dans #général <span>↵</span></div>
-        </div>
-        <div class="intro-footer"><span>◇ Open source</span><span>⌘ 100 % navigateur</span><span>↗ GitHub Pages ready</span></div>
-      </section>
-      <section class="login-card">
-        <div class="login-symbol"><img src="./icon.svg" alt=""></div>
-        <h2>Votre bot vous attend.</h2>
-        <p class="login-subtitle">Connectez-le et rejoignez la conversation.</p>
-        <form id="login-form">
-          <label for="token">TOKEN DU BOT <span>*</span></label>
-          <div class="token-field"><input id="token" type="password" placeholder="Collez votre token ici" required autocomplete="off" spellcheck="false" aria-describedby="token-help login-error"><button id="toggle-token" type="button" aria-label="Afficher le token">◉</button></div>
-          <p id="token-help" class="field-help">Disponible dans le <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Developer Portal ↗</a>, rubrique Bot.</p>
-          <label class="checkbox-label"><input id="content-intent" type="checkbox" checked><span>Lire le contenu des messages<small>Activez « Message Content Intent » dans le portail.</small></span></label>
-          <details id="relay-options" class="relay-options"><summary>Connexion avancée · accès direct bloqué ?</summary><label for="relay-url">ADRESSE DE VOTRE RELAIS</label><input id="relay-url" type="url" placeholder="https://livebot-relay.votre-compte.workers.dev" autocomplete="off" spellcheck="false"><p class="field-help">Laissez vide pour une connexion directe. Utilisez uniquement un relais que vous contrôlez ou auquel vous faites confiance.</p><label class="checkbox-label"><input id="relay-consent" type="checkbox"><span>J’autorise ce relais à recevoir mon token pour transmettre les requêtes à Discord.</span></label></details>
-          <p id="login-error" class="error-text" role="alert" hidden></p>
-          <button id="connection-check" class="connection-check" type="button">Tester la connexion · sans token</button>
-          <p id="connection-result" class="field-help" role="status" hidden></p>
-          <button class="primary-button" id="connect-button" type="submit">Connecter mon bot <span>→</span></button>
-        </form>
-        <div class="divider"><span>ou découvrez l’interface</span></div>
-        <button id="demo-button" class="secondary-button" type="button">Essayer le mode démo <span>↗</span></button>
-        <p class="privacy-note">▣ Token conservé en mémoire, effacé à la déconnexion. Les appels passent par Discord ou le relais choisi. Avec npm start, le relais est sur votre PC.</p>
-      </section>
+    <img class="login-artwork" src="./assets/discord/login-artwork.svg" alt="" aria-hidden="true">
+    <a class="login-brand" href="./"><img src="./assets/discord/discord-wordmark.svg" alt="Discord"><span>LiveBot</span></a>
+    <main class="login-card">
+      <header class="login-heading"><h1>Bon retour parmi nous !</h1><p>Connecte-toi avec ton bot pour continuer.</p></header>
+      <form id="login-form">
+        <label class="field-label" for="token">TOKEN DU BOT <span>*</span></label>
+        <div class="token-field"><input id="token" type="password" required autocomplete="off" spellcheck="false" aria-describedby="token-help login-error"><button id="toggle-token" type="button" aria-label="Afficher le token"><span data-icon="eye"></span></button></div>
+        <a id="token-help" class="token-help" href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Ouvrir le Developer Portal</a>
+        <label class="checkbox-label"><input id="content-intent" type="checkbox" checked><span>Lire le contenu des messages<small>Active « Message Content Intent » dans les paramètres du bot.</small></span></label>
+        <label id="relay-consent-row" class="checkbox-label"><input id="relay-consent" type="checkbox"><span>J’autorise le relais choisi à transmettre mon token à Discord.</span></label>
+        <details id="relay-options" class="relay-options"><summary>Options de connexion</summary><label class="field-label" for="relay-url">RELAIS API</label><input id="relay-url" type="url" placeholder="https://livebot.cataclyse.xyz" autocomplete="off" spellcheck="false"><p class="field-help">Le relais reçoit ton token. Utilise uniquement un serveur auquel tu fais confiance. Laisse vide pour un accès direct.</p><button id="connection-check" class="connection-check" type="button">Tester la connexion sans token</button><p id="connection-result" class="field-help" role="status" hidden></p></details>
+        <p id="login-error" class="error-text" role="alert" hidden></p>
+        <button class="primary-button" id="connect-button" type="submit">Se connecter</button>
+      </form>
+      <p class="demo-line">Pas de token ? <button id="demo-button" type="button">Essayer la démo</button></p>
+      <p class="privacy-note">Ton token reste en mémoire et est oublié à la fermeture de l’onglet.</p>
     </main>
-    <footer class="login-footer"><span>Un client indépendant. Non affilié à Discord.</span><span>Fait pour les bots, par leurs humains.</span></footer>
+    <footer class="login-footer">LiveBot est un client de bot indépendant, non affilié à Discord.</footer>
   </div>
 
   <div id="app-view" class="app-view" hidden>
-    <nav class="server-rail" aria-label="Serveurs"><button id="home-button" class="server-button home-button" title="Accueil LiveBot"><img src="./icon.svg" alt="LiveBot"></button><div class="rail-divider"></div><div id="server-list"></div><button id="invite-button" class="server-button add-server" title="Inviter le bot sur un serveur" aria-label="Inviter le bot">+</button><div class="rail-bottom"><button id="about-button" class="server-button about-button" title="À propos" aria-label="À propos">?</button></div></nav>
+    <nav class="server-rail" aria-label="Serveurs"><button id="home-button" class="server-button home-button" title="Accueil LiveBot"><img src="./assets/discord/discord-symbol.svg" alt="Discord"></button><div class="rail-divider"></div><div id="server-list"></div><button id="invite-button" class="server-button add-server" title="Inviter le bot sur un serveur" aria-label="Inviter le bot">+</button><div class="rail-bottom"><button id="about-button" class="server-button about-button" title="À propos" aria-label="À propos">?</button></div></nav>
     <aside class="channel-sidebar">
-      <button class="server-header" id="server-header"><span id="server-name">Vos serveurs</span><span>⌄</span></button>
-      <div class="sidebar-content"><div class="sidebar-banner"><span>✦</span><div>Votre bot, en direct<small id="sidebar-mode">Connecté à Discord</small></div></div><div class="channel-section-heading">SALONS TEXTUELS <button id="refresh-channels" title="Actualiser les salons" aria-label="Actualiser les salons">↻</button></div><div id="channel-list"></div></div>
-      <div class="user-panel"><div class="avatar purple" id="user-avatar">L</div><div class="user-info"><strong id="user-name">LiveBot</strong><small id="connection-status">Connexion…</small></div><button id="settings-button" class="icon-button" title="Paramètres" aria-label="Paramètres">⚙</button><button id="logout-button" class="icon-button" title="Déconnexion" aria-label="Déconnexion">⏻</button></div>
+      <button class="server-header" id="server-header"><span id="server-name">Vos serveurs</span><span data-icon="chevron"></span></button>
+      <div class="sidebar-content"><div class="sidebar-banner"><div>Votre bot, en direct<small id="sidebar-mode">Connecté à Discord</small></div></div><div class="channel-section-heading">SALONS TEXTUELS <button id="refresh-channels" title="Actualiser les salons" aria-label="Actualiser les salons"></button></div><div id="channel-list"></div></div>
+      <div class="user-panel"><div class="avatar purple" id="user-avatar">L</div><div class="user-info"><strong id="user-name">LiveBot</strong><small id="connection-status">Connexion…</small></div><button id="settings-button" class="icon-button" title="Paramètres" aria-label="Paramètres"></button><button id="logout-button" class="icon-button" title="Déconnexion" aria-label="Déconnexion"></button></div>
     </aside>
     <main class="chat-main">
-      <header class="chat-header"><button id="mobile-menu" class="icon-button mobile-only" aria-label="Afficher les salons">☰</button><span class="hash">#</span><strong id="channel-title">Bienvenue</strong><span class="header-divider"></span><span id="channel-topic">Votre espace pour piloter votre bot.</span><div class="header-actions"><span id="demo-badge" class="demo-badge" hidden>DÉMO</span><button id="refresh-messages" class="icon-button" title="Actualiser les messages" aria-label="Actualiser les messages">↻</button><button id="members-button" class="icon-button" title="Participants récents" aria-label="Afficher les participants" aria-pressed="true">♟</button><input id="search-input" class="search-input" type="search" placeholder="Rechercher" aria-label="Filtrer les messages chargés"></div></header>
+      <header class="chat-header"><button id="mobile-menu" class="icon-button mobile-only" aria-label="Afficher les salons"></button><span class="hash">#</span><strong id="channel-title">Bienvenue</strong><span class="header-divider"></span><span id="channel-topic">Votre espace pour piloter votre bot.</span><div class="header-actions"><span id="demo-badge" class="demo-badge" hidden>DÉMO</span><button id="refresh-messages" class="icon-button" title="Actualiser les messages" aria-label="Actualiser les messages"></button><button id="members-button" class="icon-button" title="Participants récents" aria-label="Afficher les participants" aria-pressed="true"></button><input id="search-input" class="search-input" type="search" placeholder="Rechercher" aria-label="Filtrer les messages chargés"></div></header>
       <div id="app-notice" class="app-notice" role="status" hidden></div>
-      <div class="chat-body"><section class="conversation"><div id="message-scroller" class="message-scroller"><div id="channel-welcome" class="channel-welcome"><div class="welcome-icon">#</div><h2 id="welcome-title">Bienvenue sur LiveBot</h2><p id="welcome-description">Choisissez un serveur pour retrouver vos conversations.</p></div><button id="load-older" class="load-older" hidden>Charger les messages précédents</button><div id="messages" aria-live="polite" aria-relevant="additions"></div></div><form id="message-form" class="composer"><span class="composer-plus" aria-hidden="true">#</span><textarea id="message-input" rows="1" maxlength="2000" placeholder="Choisissez un salon" aria-label="Votre message" disabled></textarea><span id="character-count">0/2000</span><button id="send-button" type="submit" title="Envoyer le message" aria-label="Envoyer le message" disabled>➤</button></form><div class="composer-help"><span><strong>Entrée</strong> pour envoyer · <strong>Maj + Entrée</strong> pour une nouvelle ligne</span><span id="composer-identity">Vous écrivez en tant que bot</span></div></section><aside id="members-panel" class="members-panel"><h3>PARTICIPANTS RÉCENTS — <span id="member-count">0</span></h3><div id="member-list"></div><p class="members-help">Auteurs des messages chargés dans ce salon. Leur présence n’est pas suivie.</p></aside></div>
+      <div class="chat-body"><section class="conversation"><div id="message-scroller" class="message-scroller"><div id="channel-welcome" class="channel-welcome"><div class="welcome-icon">#</div><h2 id="welcome-title">Bienvenue sur LiveBot</h2><p id="welcome-description">Choisissez un serveur pour retrouver vos conversations.</p></div><button id="load-older" class="load-older" hidden>Charger les messages précédents</button><div id="messages" aria-live="polite" aria-relevant="additions"></div></div><div class="formatting-toolbar" role="toolbar" aria-label="Formatage du message"><button type="button" data-format="bold" aria-label="Gras" title="Gras (Ctrl+B)"><strong>B</strong></button><button type="button" data-format="italic" aria-label="Italique" title="Italique (Ctrl+I)"><em>I</em></button><button type="button" data-format="underline" aria-label="Souligné" title="Souligné (Ctrl+U)"><u>U</u></button><button type="button" data-format="strike" aria-label="Barré" title="Barré"><s>S</s></button><button type="button" data-format="code" aria-label="Code inline" title="Code inline">&lt;/&gt;</button><button type="button" data-format="block" aria-label="Bloc de code" title="Bloc de code">{ }</button><button type="button" data-format="spoiler" aria-label="Spoiler" title="Texte masqué">||</button></div><form id="message-form" class="composer"><span class="composer-plus" aria-hidden="true">#</span><textarea id="message-input" rows="1" maxlength="2000" placeholder="Choisissez un salon" aria-label="Votre message" disabled></textarea><span id="character-count">0/2000</span><button id="send-button" type="submit" title="Envoyer le message" aria-label="Envoyer le message" disabled></button></form><div class="composer-help"><span><strong>Entrée</strong> pour envoyer · <strong>Maj + Entrée</strong> pour une nouvelle ligne</span><span id="composer-identity">Vous écrivez en tant que bot</span></div></section><aside id="members-panel" class="members-panel"><h3>PARTICIPANTS RÉCENTS — <span id="member-count">0</span></h3><div id="member-list"></div><p class="members-help">Auteurs des messages chargés dans ce salon. Leur présence n’est pas suivie.</p></aside></div>
     </main>
   </div>
-  <dialog id="settings-dialog"><div class="dialog-header"><h2>Votre espace LiveBot</h2><button id="close-settings" class="icon-button" aria-label="Fermer">✕</button></div><p>Un client open source pour utiliser votre propre bot Discord.</p><div class="settings-row"><div><strong>Affichage compact</strong><small>Réduire l’espace entre les messages.</small></div><input type="checkbox" id="compact-toggle" aria-label="Affichage compact"></div><div class="settings-row"><div><strong>État de la connexion</strong><small id="settings-status">Mode démo</small></div><span class="bot-tag">APP</span></div><p class="settings-note">Les messages sont envoyés sous l’identité du bot, avec ses permissions. Les appels vocaux et les messages privés ne sont pas pris en charge. Fermer ou recharger l’onglet efface le token.</p><a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" class="portal-link">Ouvrir le Developer Portal ↗</a></dialog>
+  <dialog id="settings-dialog"><div class="dialog-header"><h2>Votre espace LiveBot</h2><button id="close-settings" class="icon-button" aria-label="Fermer"></button></div><p>Un client open source pour utiliser votre propre bot Discord.</p><div class="settings-row"><div><strong>Affichage compact</strong><small>Réduire l’espace entre les messages.</small></div><input type="checkbox" id="compact-toggle" aria-label="Affichage compact"></div><div class="settings-row"><div><strong>État de la connexion</strong><small id="settings-status">Mode démo</small></div><span class="bot-tag">APP</span></div><p class="settings-note">Les messages sont envoyés sous l’identité du bot, avec ses permissions. Les appels vocaux et les messages privés ne sont pas pris en charge. Fermer ou recharger l’onglet efface le token.</p><a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" class="portal-link">Ouvrir le Developer Portal</a></dialog>
+  <dialog id="image-dialog" class="image-dialog"><div class="viewer-header"><span id="viewer-title"></span><button id="close-image" class="icon-button" aria-label="Fermer l’image"></button></div><img id="viewer-image" alt=""><a id="viewer-original" target="_blank" rel="noopener noreferrer">Ouvrir l’original</a></dialog>
 </body>
 </html>

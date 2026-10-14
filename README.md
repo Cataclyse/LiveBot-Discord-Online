@@ -59,7 +59,12 @@ Références : [GitHub Pages est un hébergement statique](https://docs.github.c
 - Serveurs du bot et salons textuels, regroupés par catégorie.
 - Historique paginé, messages reçus en direct via le Gateway, reprise de session et reconnexion.
 - Envoi de messages et suppression de vos propres messages avec confirmation.
-- Liens vers les pièces jointes et rendu simple des titres/descriptions d’embed.
+- Gras, italique, souligné, barré, combinaisons de styles, spoilers, citations, listes, titres et texte secondaire.
+- Code inline et blocs de code avec coloration syntaxique et bouton de copie.
+- Images et GIF des pièces jointes et des aperçus, agrandissement au clic et spoilers d’images.
+- Vidéos et fichiers audio en lecture native, liens de téléchargement pour les autres fichiers.
+- Embeds avec auteur, titre, description formatée, champs, miniature, image et pied de page.
+- Barre de formatage et raccourcis Ctrl/Cmd+B, I et U dans le champ de message.
 - Recherche dans les messages chargés et liste de leurs auteurs.
 - Affichage compact, interface responsive et navigation mobile.
 - Gestion des erreurs de permissions, tokens et limites de requêtes Discord.
@@ -70,7 +75,7 @@ Le token est conservé **uniquement en mémoire** dans cet onglet. Il n’est pl
 
 Le site reçoit nécessairement le token que vous saisissez : utilisez votre propre déploiement ou une copie du code que vous avez vérifiée. Ne publiez jamais votre token dans un commit ou un ticket. Si un token a été divulgué, régénérez-le depuis le portail Discord.
 
-Les contenus Discord sont affichés comme du texte, sans injection HTML. Les mentions automatiques sont désactivées à l’envoi (`allowed_mentions.parse: []`).
+Le contenu est rendu avec une copie locale de markdown-it, avec le HTML brut désactivé et les liens validés. La coloration du code utilise highlight.js, également fourni localement. Les mentions automatiques sont désactivées à l’envoi (`allowed_mentions.parse: []`). Les images peuvent venir du CDN Discord ou des URL HTTPS contenues dans les embeds ; elles sont chargées sans référent. Les URL signées des pièces jointes sont conservées et peuvent expirer suivant les règles de Discord.
 
 ## Limites
 
@@ -98,4 +103,6 @@ Documentation : [API et authentification](https://docs.discord.com/developers/re
 
 ## Licence
 
-MIT. Projet indépendant, non affilié à Discord. Les noms et marques de Discord appartiennent à leurs propriétaires respectifs.
+MIT pour le code du projet. Projet indépendant, non affilié à Discord. Les assets officiels et polices Discord restent la propriété de Discord ; ils ne sont pas couverts par la licence MIT du projet. Leurs URL sources sont documentées dans `assets/discord/sources.json`, depuis le login officiel et la [page de marque Discord](https://discord.com/branding). Les licences des bibliothèques intégrées sont conservées dans `assets/vendor/`.
+
+Le module Markdown distribué est déjà inclus dans le dépôt. Pour le régénérer après une mise à jour de ses bibliothèques : `npm install`, puis `npm run vendor:build`. Le site reste constitué de fichiers HTML, CSS et JavaScript et ne charge aucun script de bibliothèque depuis un CDN.
