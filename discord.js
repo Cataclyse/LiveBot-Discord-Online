@@ -38,7 +38,9 @@ export class DiscordClient {
   #base;
   constructor(token, fetcher = globalThis.fetch, relayURL = '') {
     this.#token = normalizeBotToken(token);
-    this.#fetch = fetcher;
+    // Window.fetch requires the browser global as its receiver. Calling an
+    // unbound native fetch through this.#fetch makes the client its receiver.
+    this.#fetch = fetcher.bind(globalThis);
     this.#base = relayAPIBase(relayURL);
   }
   async prepare(pageURL = globalThis.location?.href) {

@@ -2,6 +2,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DiscordClient, Gateway, normalizeBotToken, probeConnection } from '../discord.js';
 
+test('fetch keeps its global receiver for requests, probes and local detection', async () => {
+  const calls = [];
+  function browserFetch(url, options) {
+    assert.equal(this, globalThis, 'Native Window.fetch must not receive DiscordClient as this');
+    calls.push(url);
+    if (url.endsWith('/livebot-health')) return Promise.resolve(new Response('{"relay":"livebot-local-v1"}'));
+    return Promise.resolve(new Response('{}', { status: options.headers ? 200 : 401 }));
+  }
+  const client = new DiscordClient('fake-token', browserFetch);
+  await client.prepare('http://127.0.0.1:8080');
+  await client.me();
+  await client.probe();
+  assert.deepEqual(calls, ['http://127.0.0.1:8080/livebot-health', 'http://127.0.0.1:8080/api/discord/users/@me', 'http://127.0.0.1:8080/api/discord/users/@me']);
+  await probeConnection('https://livebot.cataclyse.xyz', browserFetch);
+});
+
 test('invalid header characters are rejected before any network request', () => {
   for (const token of ['fake\u200btoken', 'fake…token', '"fake-token"', 'fake token', '']) {
     assert.throws(() => new DiscordClient(token, () => { throw new Error('Unexpected network'); }), /caractères invalides/);
