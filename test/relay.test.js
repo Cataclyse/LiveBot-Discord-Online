@@ -23,7 +23,7 @@ test('relay forwards only to Discord and preserves rate limits and authorization
   const r = await handleRelay(request('/users/@me'), [origin], async (url, options) => { call = { url, options }; return new Response('{"message":"401: Unauthorized"}', { status: 401, headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset-After': '2' } }); });
   assert.equal(call.url, 'https://discord.com/api/v10/users/@me');
   assert.equal(call.options.headers.Authorization, 'Bot fake-token');
-  assert.equal(call.options.redirect, 'error');
+  assert.equal(call.options.redirect, 'manual');
   assert.equal(r.status, 401);
   assert.equal(r.headers.get('X-RateLimit-Reset-After'), '2');
   assert.equal(r.headers.get('Cache-Control'), 'no-store');

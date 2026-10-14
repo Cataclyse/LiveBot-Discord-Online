@@ -1,6 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DiscordClient, Gateway } from '../discord.js';
+import { DiscordClient, Gateway, normalizeBotToken, probeConnection } from '../discord.js';
+
+test('invalid header characters are rejected before any network request', () => {
+  for (const token of ['fake\u200btoken', 'fake…token', '"fake-token"', 'fake token', '']) {
+    assert.throws(() => new DiscordClient(token, () => { throw new Error('Unexpected network'); }), /caractères invalides/);
+  }
+  assert.equal(normalizeBotToken(' Bot fake-token '), 'fake-token');
+});
+
+test('connection diagnostics do not send any token or authorization header', async () => {
+  let call;
+  const result = await probeConnection('https://livebot.cataclyse.xyz', async (url, options) => { call = { url, options }; return new Response('{}', { status: 401 }); });
+  assert.equal(call.url, 'https://livebot.cataclyse.xyz/api/discord/users/@me');
+  assert.equal(call.options.headers, undefined);
+  assert.deepEqual(result, { endpoint: 'https://livebot.cataclyse.xyz', direct: false });
+});
 
 test('requests authenticate as a bot and suppress automatic mentions', async () => {
   const calls = [];

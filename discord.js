@@ -1,6 +1,23 @@
 const API = 'https://discord.com/api/v10';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+export function normalizeBotToken(value) {
+  const token = String(value).trim().replace(/^Bot\s+/i, '');
+  if (!/^[A-Za-z0-9._-]{1,512}$/.test(token)) {
+    throw new Error('Le token contient des caractères invalides. Copiez le vrai token depuis Discord Developer Portal → Bot, sans guillemets, caractères masqués ou caractères invisibles.');
+  }
+  return token;
+}
+
+export async function probeConnection(relayURL, fetcher = globalThis.fetch, pageURL = globalThis.location?.href) {
+  const client = new DiscordClient('connection-check', fetcher, relayURL);
+  try {
+    await client.prepare(pageURL);
+    // No Authorization header is sent by the probe.
+    return await client.probe();
+  } finally { client.stop(); }
+}
+
 export function relayAPIBase(value) {
   if (!value?.trim()) return API;
   let url;
@@ -20,7 +37,7 @@ export class DiscordClient {
   #stopped = false;
   #base;
   constructor(token, fetcher = globalThis.fetch, relayURL = '') {
-    this.#token = token.trim().replace(/^Bot\s+/i, '');
+    this.#token = normalizeBotToken(token);
     this.#fetch = fetcher;
     this.#base = relayAPIBase(relayURL);
   }
@@ -38,6 +55,21 @@ export class DiscordClient {
     finally { clearTimeout(timer); }
   }
   stop() { this.#stopped = true; this.#token = ''; }
+  async probe() {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const r = await this.#fetch(this.#base + '/users/@me', { signal: controller.signal, credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer' });
+      await r.text();
+      if (r.status !== 401) throw new Error(`Le test sans token a reçu HTTP ${r.status}. Vérifiez la configuration du relais.`);
+      return { endpoint: new URL(this.#base).origin, direct: this.#base === API };
+    } catch (cause) {
+      if (controller.signal.aborted) throw new Error('Le test de connexion a dépassé 10 secondes.');
+      if (cause instanceof Error && cause.message.startsWith('Le test sans token')) throw cause;
+      const origin = globalThis.location?.origin || 'inconnue';
+      throw new Error(`Test sans token bloqué depuis ${origin}. Autorisez cette origine exacte dans ALLOWED_ORIGINS, vérifiez les extensions/VPN et rechargez avec Ctrl + F5.`);
+    } finally { clearTimeout(timer); }
+  }
   request(path, options = {}) {
     const task = this.#queue.then(() => this.#request(path, options));
     this.#queue = task.catch(() => {});
@@ -58,9 +90,10 @@ export class DiscordClient {
           ...(options.body ? { body: JSON.stringify(options.body) } : {}),
           signal: controller.signal, credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer'
         });
-      } catch {
+      } catch (cause) {
         if (controller.signal.aborted) throw new Error('La connexion n’a pas répondu sous 20 secondes. Réessayez.');
-        throw new Error(this.#base === API ? 'L’accès direct à Discord a échoué (réseau ou blocage navigateur). En local, utilisez npm start ; sur GitHub Pages, configurez votre relais dans « Connexion avancée ».' : 'Le relais est injoignable ou refuse cette origine. Vérifiez son adresse et ALLOWED_ORIGINS ; consultez la console réseau du navigateur.');
+        console.warn('[LiveBot] Appel API bloqué', { endpoint: new URL(this.#base).origin, origin: globalThis.location?.origin || 'inconnue', errorType: cause?.name || 'Error' });
+        throw new Error(this.#base === API ? 'L’accès direct à Discord a échoué (réseau ou blocage navigateur). En local, utilisez npm start ; sur GitHub Pages, configurez votre relais dans « Connexion avancée ».' : 'La requête authentifiée vers le relais a échoué. Cliquez sur « Tester la connexion » pour vérifier l’accès sans token, puis rechargez avec Ctrl + F5.');
       } finally { clearTimeout(timer); }
       const data = response.status === 204 ? null : await response.json().catch(() => ({}));
       if (response.status === 429) {
@@ -115,7 +148,7 @@ export class Gateway {
   #stopped = false;
   #attempt = 0;
   constructor({ token, url, contentIntent, onEvent, onStatus }) {
-    this.#token = token.trim().replace(/^Bot\s+/i, '');
+    this.#token = normalizeBotToken(token);
     this.url = url;
     this.intents = 1 | 512 | (contentIntent ? 32768 : 0);
     this.onEvent = onEvent;

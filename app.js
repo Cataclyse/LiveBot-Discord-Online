@@ -1,4 +1,4 @@
-import { DiscordClient, Gateway } from './discord.js';
+import { DiscordClient, Gateway, probeConnection } from './discord.js';
 import { config } from './config.js';
 
 const $ = id => document.getElementById(id);
@@ -244,6 +244,20 @@ $('invite-button').addEventListener('click', () => {
   const url = new URL('https://discord.com/oauth2/authorize'); url.searchParams.set('client_id', state.user.id); url.searchParams.set('scope', 'bot'); url.searchParams.set('permissions', '68608'); window.open(url.href, '_blank', 'noopener,noreferrer');
 });
 window.addEventListener('pagehide', logout);
-$('relay-url').value = config.relayURL || '';
-if (config.relayURL) $('relay-options').open = true;
+const localPage = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+$('relay-url').value = localPage ? '' : config.relayURL || '';
+if ($('relay-url').value) $('relay-options').open = true;
 $('relay-url').addEventListener('input', () => { $('relay-consent').checked = false; });
+$('connection-check').addEventListener('click', async () => {
+  const button = $('connection-check');
+  button.disabled = true; $('connection-result').hidden = false;
+  $('connection-result').classList.remove('error-text');
+  $('connection-result').textContent = 'Vérification sans token…';
+  try {
+    const result = await probeConnection($('relay-url').value.trim());
+    $('connection-result').textContent = `Connexion réussie à ${result.endpoint}. Aucun token envoyé. ${result.direct ? 'Accès direct disponible.' : 'Le relais est accessible depuis cet onglet.'} Si la connexion du bot échoue encore, vérifiez le token ; une extension peut aussi filtrer les requêtes authentifiées.`;
+  } catch (e) {
+    $('connection-result').classList.add('error-text');
+    $('connection-result').textContent = e.message;
+  } finally { button.disabled = false; }
+});

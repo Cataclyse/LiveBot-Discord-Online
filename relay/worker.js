@@ -49,8 +49,9 @@ export async function handleRelay(request, allowedOrigins, fetcher = globalThis.
     }
     const upstream = await fetcher(`https://discord.com/api/v10${path}${url.search}`, {
       method: request.method, headers: { Authorization: authorization, 'User-Agent': 'DiscordBot (https://github.com/Cataclyse/LiveBot-Discord-Online, 1.0)', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      ...(body ? { body } : {}), redirect: 'error', signal: controller.signal
+      ...(body ? { body } : {}), redirect: 'manual', signal: controller.signal
     });
+    if (upstream.status >= 300 && upstream.status < 400) return reply(502, 'Discord upstream redirect refused');
     for (const key of ['x-ratelimit-remaining', 'x-ratelimit-reset-after', 'retry-after']) { const value = upstream.headers.get(key); if (value !== null) cors.set(key, value); }
     cors.set('Content-Type', 'application/json');
     const content = upstream.status === 204 ? null : await upstream.text();

@@ -38,6 +38,8 @@
           <label class="checkbox-label"><input id="content-intent" type="checkbox" checked><span>Lire le contenu des messages<small>Activez « Message Content Intent » dans le portail.</small></span></label>
           <details id="relay-options" class="relay-options"><summary>Connexion avancée · accès direct bloqué ?</summary><label for="relay-url">ADRESSE DE VOTRE RELAIS</label><input id="relay-url" type="url" placeholder="https://livebot-relay.votre-compte.workers.dev" autocomplete="off" spellcheck="false"><p class="field-help">Laissez vide pour une connexion directe. Utilisez uniquement un relais que vous contrôlez ou auquel vous faites confiance.</p><label class="checkbox-label"><input id="relay-consent" type="checkbox"><span>J’autorise ce relais à recevoir mon token pour transmettre les requêtes à Discord.</span></label></details>
           <p id="login-error" class="error-text" role="alert" hidden></p>
+          <button id="connection-check" class="connection-check" type="button">Tester la connexion · sans token</button>
+          <p id="connection-result" class="field-help" role="status" hidden></p>
           <button class="primary-button" id="connect-button" type="submit">Connecter mon bot <span>→</span></button>
         </form>
         <div class="divider"><span>ou découvrez l’interface</span></div>

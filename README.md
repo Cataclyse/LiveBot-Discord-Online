@@ -48,6 +48,10 @@ Le relais accepte uniquement les routes Discord nécessaires au client, transmet
 
 Les origines CORS limitent l’accès depuis un navigateur ; elles ne constituent pas une authentification du relais. Pour une utilisation publique importante, configurez aussi des limites de trafic sur votre hébergement. Le code reste sous licence MIT.
 
+### Diagnostiquer une connexion
+
+Cliquez sur **Tester la connexion · sans token** dans le formulaire. Le test ne transmet aucun token : une réponse HTTP 401 est attendue et confirme que l’API est accessible. Si le test réussit mais que la connexion du bot échoue, vérifiez le token et les éventuelles extensions filtrant les requêtes authentifiées. Les tokens contenant des guillemets, des caractères masqués ou invisibles sont rejetés avant tout appel. Après une mise à jour de GitHub Pages, rechargez avec **Ctrl + F5** pour utiliser les nouveaux fichiers.
+
 Références : [GitHub Pages est un hébergement statique](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages), [Cloudflare : relais CORS](https://developers.cloudflare.com/workers/examples/cors-header-proxy/).
 
 ## Fonctionnalités
