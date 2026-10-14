@@ -112,6 +112,8 @@ export class DiscordClient {
         if ([502, 504].includes(response.status)) throw new Error('Le relais ne parvient pas à joindre Discord. Vérifiez sa connexion et réessayez.');
         if (response.status === 503) throw new Error('Configurez ALLOWED_ORIGINS sur le Worker avant de vous connecter.');
         if (response.status === 401) throw new Error('Token invalide ou révoqué. Utilisez le token d’un bot, pas celui d’un compte utilisateur.');
+        if (data.code === 50007) throw new Error('Discord refuse ce DM : la personne peut avoir désactivé les messages privés, bloqué le bot ou ne pas partager de serveur avec lui.');
+        if (data.code === 50013) throw new Error('Le bot n’a pas la permission requise pour cette action.');
         if (response.status === 403) throw new Error('Le bot n’a pas les permissions nécessaires dans ce salon (voir le salon, lire l’historique ou envoyer des messages).');
         if (response.status === 404) throw new Error('Ce serveur, salon ou message n’est plus accessible au bot.');
         throw new Error(`Discord a refusé la requête (${response.status}). Réessayez plus tard.`);
@@ -133,7 +135,16 @@ export class DiscordClient {
   }
   channels(id) { return this.request(`/guilds/${id}/channels`); }
   messages(id, before) { return this.request(`/channels/${id}/messages?limit=50${before ? `&before=${before}` : ''}`); }
-  send(id, content) { return this.request(`/channels/${id}/messages`, { method: 'POST', body: { content, allowed_mentions: { parse: [] } } }); }
+  send(id, content, reference) { return this.request(`/channels/${id}/messages`, { method: 'POST', body: { content, allowed_mentions: { parse: [], replied_user: false }, ...(reference ? { message_reference: { message_id: reference.id, channel_id: id, fail_if_not_exists: false } } : {}) } }); }
+  edit(id, message, content) { return this.request(`/channels/${id}/messages/${message}`, { method: 'PATCH', body: { content, allowed_mentions: { parse: [] } } }); }
+  user(id) { return this.request(`/users/${id}`); }
+  member(guild, id) { return this.request(`/guilds/${guild}/members/${id}`); }
+  roles(guild) { return this.request(`/guilds/${guild}/roles`); }
+  createDM(id) { return this.request('/users/@me/channels', { method: 'POST', body: { recipient_id: id } }); }
+  channel(id) { return this.request(`/channels/${id}`); }
+  modifyChannel(id, data) { return this.request(`/channels/${id}`, { method: 'PATCH', body: data }); }
+  deleteChannel(id) { return this.request(`/channels/${id}`, { method: 'DELETE' }); }
+  createChannel(guild, name, topic = '') { return this.request(`/guilds/${guild}/channels`, { method: 'POST', body: { name, type: 0, topic } }); }
   delete(id, message) { return this.request(`/channels/${id}/messages/${message}`, { method: 'DELETE' }); }
   gateway() { return this.request('/gateway/bot'); }
 }
@@ -152,7 +163,7 @@ export class Gateway {
   constructor({ token, url, contentIntent, onEvent, onStatus }) {
     this.#token = normalizeBotToken(token);
     this.url = url;
-    this.intents = 1 | 512 | (contentIntent ? 32768 : 0);
+    this.intents = 1 | 512 | 4096 | (contentIntent ? 32768 : 0);
     this.onEvent = onEvent;
     this.onStatus = onStatus;
   }

@@ -44,7 +44,7 @@ test('requests authenticate as a bot and suppress automatic mentions', async () 
   assert.equal(calls[0].options.headers.Authorization, 'Bot fake-token');
   assert.equal(calls[0].options.credentials, 'omit');
   assert.equal(calls[0].options.redirect, 'error');
-  assert.deepEqual(JSON.parse(calls[0].options.body), { content: '@everyone hello', allowed_mentions: { parse: [] } });
+  assert.deepEqual(JSON.parse(calls[0].options.body), { content: '@everyone hello', allowed_mentions: { parse: [], replied_user: false } });
 });
 
 test('unauthorized tokens and missing permissions produce actionable errors', async () => {
@@ -111,7 +111,7 @@ test('gateway identifies, records READY, resumes and stops cleanly', async () =>
     const first = sockets[0];
     first.packet({ op: 10, d: { heartbeat_interval: 45000 } });
     assert.equal(first.sent[0].op, 2);
-    assert.equal(first.sent[0].d.intents, 33281);
+    assert.equal(first.sent[0].d.intents, 37377);
     first.packet({ op: 0, t: 'READY', s: 42, d: { session_id: 'session', resume_gateway_url: 'wss://gateway-us-east1-b.discord.gg' } });
     first.close(4000);
     gateway.start();

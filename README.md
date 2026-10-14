@@ -65,6 +65,11 @@ Références : [GitHub Pages est un hébergement statique](https://docs.github.c
 - Vidéos et fichiers audio en lecture native, liens de téléchargement pour les autres fichiers.
 - Embeds avec auteur, titre, description formatée, champs, miniature, image et pied de page.
 - Barre de formatage et raccourcis Ctrl/Cmd+B, I et U dans le champ de message.
+- Profils cliquables : nom, avatar/bannière disponibles, date de création, surnom et rôles dans le serveur.
+- Ouverture de DM depuis un profil, historique, envoi et réception en direct ; les conversations connues restent accessibles via Accueil pendant la session.
+- Menu contextuel des messages : réponse sans mention automatique, copie, modification de vos messages et suppression selon les permissions du bot.
+- Menu contextuel des salons : copie, actualisation, création, modification du nom/sujet et suppression avec confirmation.
+- Événements système, stickers, sondages en lecture seule, messages transférés et texte/médias des composants Discord.
 - Recherche dans les messages chargés et liste de leurs auteurs.
 - Affichage compact, interface responsive et navigation mobile.
 - Gestion des erreurs de permissions, tokens et limites de requêtes Discord.
@@ -79,7 +84,11 @@ Le contenu est rendu avec une copie locale de markdown-it, avec le HTML brut dé
 
 ## Limites
 
-Le client utilise l’API officielle des **bots** : il ne transforme pas le bot en compte utilisateur. Les permissions Discord continuent de s’appliquer. Les appels vocaux, les messages privés, l’envoi de fichiers, les interactions slash et les bots nécessitant plusieurs shards ne sont pas pris en charge. La liste des participants représente les auteurs des messages chargés, pas une liste complète des membres ou leur présence.
+Le client utilise l’API officielle des **bots** : il ne transforme pas le bot en compte utilisateur. Les permissions Discord continuent de s’appliquer. Les appels vocaux, l’envoi de fichiers, les interactions slash et les bots nécessitant plusieurs shards ne sont pas pris en charge. La liste des participants représente les auteurs des messages chargés, pas une liste complète des membres ou leur présence. L’API des bots ne fournit pas le profil complet d’un compte utilisateur, notamment sa bio et ses activités privées. Les DM peuvent être refusés par Discord selon les réglages et l’accès du destinataire ; aucun message n’est envoyé automatiquement en ouvrant un DM. Les conversations sont mémorisées uniquement pour la session en cours.
+
+Le bot peut supprimer ses messages. La suppression de messages d’autres membres nécessite **Manage Messages** ; créer, modifier et supprimer des salons nécessite **Manage Channels**. Les menus tiennent compte des rôles et des overwrites du salon, et Discord contrôle les permissions pour chaque opération. La suppression d’un salon ou d’un message demande une confirmation.
+
+Un message vide n’est pas nécessairement un refus d’accès : événements système, stickers, sondages et composants sont rendus séparément. Quand l’API n’envoie réellement aucun contenu, le bouton **Pourquoi ?** décrit l’activation de **Message Content Intent** dans le portail et la reconnexion nécessaire. Le client ne peut pas reconstruire un contenu retenu par Discord. Les stickers Lottie sont indiqués par un lien vers leur fichier ; les stickers PNG/APNG/GIF sont affichés.
 
 Si Discord, une extension ou les règles CORS empêchent un appel direct, configurez votre relais comme expliqué plus haut. Il n’y a pas de bascule automatique vers un relais externe. Un relais API ne résout pas un blocage du WebSocket Gateway : vérifiez aussi les règles réseau, extensions et VPN si le temps réel échoue. Gardez l’onglet ouvert pour maintenir la connexion ; la mise en veille du navigateur peut interrompre le temps réel.
 

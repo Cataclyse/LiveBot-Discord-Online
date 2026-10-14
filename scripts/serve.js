@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { handleRelay } from '../relay/worker.js';
 const root = new URL('../', import.meta.url);
 const files = new Map([['/', ['index.html', 'text/html']], ['/index.html', ['index.html', 'text/html']], ['/style.css', ['style.css', 'text/css']], ['/app.js', ['app.js', 'text/javascript']], ['/discord.js', ['discord.js', 'text/javascript']], ['/config.js', ['config.js', 'text/javascript']], ['/icon.svg', ['icon.svg', 'image/svg+xml']]]);
-for (const file of ['message-content.js', 'media.js', 'icons.js']) files.set('/' + file, [file, 'text/javascript']);
+for (const file of ['message-content.js', 'media.js', 'icons.js', 'message-model.js', 'context-menu.js']) files.set('/' + file, [file, 'text/javascript']);
 export function createLocalServer(fetcher = globalThis.fetch) { return createServer(async (req, res) => {
   const host = req.headers.host || '';
   if (!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)) { res.writeHead(403); res.end('Local requests only'); return; }
@@ -18,7 +18,7 @@ export function createLocalServer(fetcher = globalThis.fetch) { return createSer
       const headers = new Headers();
       for (const key of ['authorization', 'content-type']) if (req.headers[key]) headers.set(key, req.headers[key]);
       headers.set('Origin', origin);
-      const request = new Request(url, { method: req.method, headers, ...(req.method === 'POST' ? { body: req, duplex: 'half' } : {}) });
+      const request = new Request(url, { method: req.method, headers, ...(['POST', 'PATCH'].includes(req.method) ? { body: req, duplex: 'half' } : {}) });
       const response = await handleRelay(request, [origin], fetcher);
       res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer()));
     } catch { res.writeHead(502, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ message: 'Local relay error' })); }

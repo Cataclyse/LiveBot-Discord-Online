@@ -2,6 +2,9 @@
 // the visitor's bot token. Never log request headers or bodies.
 const routes = [
   ['GET', /^\/users\/@me$/], ['GET', /^\/users\/@me\/guilds$/], ['GET', /^\/gateway\/bot$/],
+  ['GET', /^\/users\/\d+$/], ['GET', /^\/guilds\/\d+\/members\/\d+$/], ['GET', /^\/guilds\/\d+\/roles$/],
+  ['POST', /^\/users\/@me\/channels$/], ['GET', /^\/channels\/\d+$/], ['PATCH', /^\/channels\/\d+$/], ['DELETE', /^\/channels\/\d+$/],
+  ['POST', /^\/guilds\/\d+\/channels$/], ['PATCH', /^\/channels\/\d+\/messages\/\d+$/],
   ['GET', /^\/guilds\/\d+\/channels$/], ['GET', /^\/channels\/\d+\/messages$/],
   ['POST', /^\/channels\/\d+\/messages$/], ['DELETE', /^\/channels\/\d+\/messages\/\d+$/]
 ];
@@ -16,7 +19,7 @@ export async function handleRelay(request, allowedOrigins, fetcher = globalThis.
   if (!allowedOrigins.length) return reply(503, 'Relay not configured');
   if (!origin || !allowedOrigins.includes(origin)) return reply(403, 'Origin not allowed');
   cors.set('Access-Control-Allow-Origin', origin);
-  cors.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  cors.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   cors.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   cors.set('Access-Control-Expose-Headers', 'X-RateLimit-Remaining, X-RateLimit-Reset-After, Retry-After');
   const url = new URL(request.url);
@@ -35,7 +38,7 @@ export async function handleRelay(request, allowedOrigins, fetcher = globalThis.
   const timeout = setTimeout(() => controller.abort(), 18000);
   try {
     let body;
-    if (request.method === 'POST') {
+    if (['POST', 'PATCH'].includes(request.method)) {
       if (!request.headers.get('Content-Type')?.startsWith('application/json')) return reply(415, 'JSON required');
       const reader = request.body?.getReader();
       if (!reader) return reply(400, 'Missing body');
@@ -44,8 +47,26 @@ export async function handleRelay(request, allowedOrigins, fetcher = globalThis.
       const bytes = new Uint8Array(length); let offset = 0;
       for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
       const data = JSON.parse(new TextDecoder().decode(bytes));
-      if (typeof data.content !== 'string' || !data.content.trim() || data.content.length > 2000) return reply(400, 'Invalid message content');
-      body = JSON.stringify({ content: data.content, allowed_mentions: { parse: [] } });
+      if(!data||typeof data!=='object'||Array.isArray(data))return reply(400,'Invalid JSON object');
+      if (path === '/users/@me/channels') {
+        if (typeof data.recipient_id !== 'string' || !/^\d{1,20}$/.test(data.recipient_id)) return reply(400, 'Invalid recipient');
+        body = JSON.stringify({ recipient_id: data.recipient_id });
+      } else if (/^\/channels\/\d+\/messages(?:\/\d+)?$/.test(path)) {
+        if (typeof data.content !== 'string' || (request.method === 'POST' && !data.content.trim()) || data.content.length > 2000) return reply(400, 'Invalid message content');
+        const message = { content: data.content, allowed_mentions: { parse: [], replied_user: false } };
+        if (request.method === 'POST' && data.message_reference) {
+          if (!/^\d{1,20}$/.test(data.message_reference.message_id || '') || (data.message_reference.channel_id && data.message_reference.channel_id !== path.split('/')[2])) return reply(400, 'Invalid message reference');
+          message.message_reference = { message_id: data.message_reference.message_id, channel_id: path.split('/')[2], fail_if_not_exists: false };
+        }
+        body = JSON.stringify(message);
+      } else {
+        const channel = {};
+        if (data.name !== undefined) { if (typeof data.name !== 'string' || !data.name.trim() || data.name.length > 100) return reply(400, 'Invalid channel name'); channel.name = data.name.trim(); }
+        if (data.topic !== undefined) { if (data.topic !== null && (typeof data.topic !== 'string' || data.topic.length > 1024)) return reply(400, 'Invalid topic'); channel.topic = data.topic; }
+        if (request.method === 'POST') { if (!channel.name) return reply(400, 'Missing channel name'); channel.type = 0; }
+        if (!Object.keys(channel).length) return reply(400, 'Empty channel update');
+        body = JSON.stringify(channel);
+      }
     }
     const upstream = await fetcher(`https://discord.com/api/v10${path}${url.search}`, {
       method: request.method, headers: { Authorization: authorization, 'User-Agent': 'DiscordBot (https://github.com/Cataclyse/LiveBot-Discord-Online, 1.0)', ...(body ? { 'Content-Type': 'application/json' } : {}) },

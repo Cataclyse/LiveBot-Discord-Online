@@ -32,7 +32,7 @@ test('relay validates messages and disables all automatic mentions', async () =>
   let body;
   const r = await handleRelay(request('/channels/123/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: '@everyone hello', allowed_mentions: { parse: ['everyone'] } }) }), [origin], async (url, options) => { body = JSON.parse(options.body); return new Response('{"id":"1"}'); });
   assert.equal(r.status, 200);
-  assert.deepEqual(body, { content: '@everyone hello', allowed_mentions: { parse: [] } });
+  assert.deepEqual(body, { content: '@everyone hello', allowed_mentions: { parse: [], replied_user: false } });
   const invalid = await handleRelay(request('/channels/123/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: 'x'.repeat(2001) }) }), [origin], () => { throw new Error('Unexpected upstream'); });
   assert.equal(invalid.status, 400);
 });
@@ -40,6 +40,25 @@ test('relay never returns upstream exception text containing credentials', async
   const r = await handleRelay(request(), [origin], () => { throw new Error('fake-token'); });
   assert.equal(r.status, 502);
   assert.doesNotMatch(await r.text(), /fake-token/);
+});
+test('profile routes and DM creation are forwarded with validated payloads',async()=>{
+  const calls=[];const upstream=async(url,options)=>{calls.push({url,options});return new Response('{}');};
+  for(const path of ['/users/123','/guilds/456/members/123','/guilds/456/roles'])assert.equal((await handleRelay(request(path),[origin],upstream)).status,200);
+  const dm=await handleRelay(request('/users/@me/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipient_id:'123',access_token:'discarded'})}),[origin],upstream);
+  assert.equal(dm.status,200);assert.deepEqual(JSON.parse(calls.at(-1).options.body),{recipient_id:'123'});
+  assert.equal((await handleRelay(request('/users/@me/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"recipient_id":"bad"}'}),[origin],()=>{throw Error('Unexpected upstream');})).status,400);
+});
+test('message edits and replies disable mentions and preserve only validated references',async()=>{
+  let body;const upstream=async(url,options)=>{body=JSON.parse(options.body);return new Response('{}');};
+  const edit=await handleRelay(request('/channels/123/messages/456',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'new',allowed_mentions:{parse:['everyone']}})}),[origin],upstream);
+  assert.equal(edit.status,200);assert.deepEqual(body.allowed_mentions,{parse:[],replied_user:false});
+  const response=await handleRelay(request('/channels/123/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'reply',message_reference:{message_id:'456',channel_id:'123'}})}),[origin],upstream);
+  assert.equal(response.status,200);assert.deepEqual(body.message_reference,{message_id:'456',channel_id:'123',fail_if_not_exists:false});
+});
+test('channel updates strip unsupported moderation properties',async()=>{
+  let body;const response=await handleRelay(request('/channels/123',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'general',topic:'Sujet',permission_overwrites:[{allow:'8'}],nsfw:true})}),[origin],async(url,options)=>{body=JSON.parse(options.body);return new Response('{}');});
+  assert.equal(response.status,200);assert.deepEqual(body,{name:'general',topic:'Sujet'});
+  const preflight=await handleRelay(request('/channels/123',{method:'OPTIONS',headers:{'Access-Control-Request-Method':'PATCH'}}),[origin]);assert.equal(preflight.status,204);assert.match(preflight.headers.get('Access-Control-Allow-Methods'),/PATCH/);
 });
 test('client validates relay URLs and uses the selected endpoint', async () => {
   assert.equal(relayAPIBase('https://livebot.cataclyse.xyz'), 'https://livebot.cataclyse.xyz/api/discord');

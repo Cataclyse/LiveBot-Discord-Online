@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --check app.js && node --check discord.js && node --check message-content.js && node --check media.js && node --check relay/worker.js && node --test test/*.test.js",
+    "test": "node --check app.js && node --check discord.js && node --check message-content.js && node --check message-model.js && node --check context-menu.js && node --check media.js && node --check relay/worker.js && node --test test/*.test.js",
     "vendor:build": "node scripts/build-vendor.js",
     "start": "node scripts/serve.js",
     "relay:login": "wrangler login",

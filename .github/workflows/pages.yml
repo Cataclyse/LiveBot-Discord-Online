@@ -29,6 +29,7 @@ jobs:
           mkdir -p _site
           cp index.html style.css app.js discord.js config.js icon.svg _site/
           cp message-content.js media.js icons.js _site/
+          cp message-model.js context-menu.js _site/
           cp -r assets _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
